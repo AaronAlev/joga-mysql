@@ -5,6 +5,8 @@ const path = require('path');
 
 const hbs = require('express-handlebars');
 
+const con = require('./utils/db');
+
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'hbs');
 app.engine('hbs', hbs.engine({
@@ -15,55 +17,19 @@ app.engine('hbs', hbs.engine({
 
 app.use(express.static('public'));
 
-const mysql = require('mysql');
-
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: true }));
-
-var con = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "qwerty",
-    database: "joga_mysql"
-})
 
 con.connect(function(err) {
     if (err) throw err;
     console.log("Connected!");
 });
 
-app.get('/', (req, res) => {
-    let query = 'SELECT * FROM article';
-    let articles = [];
-    con.query(query, (err, result) => {
-        if (err) throw err;
-        articles = result;
-        res.render('index' , {articles: articles});
-    })
-});
+const articleRoutes = require('./routes/article');
 
-app.get('/article/:slug', (req, res) => {
-    let query = `SELECT *, author.name AS author, article.name 
-                AS article FROM article INNER JOIN author 
-                ON article.author_id = author.id WHERE slug = '${req.params.slug}'`;
-    let article;
-    con.query(query, (err, result) => {
-        if (err) throw err;
-        article = result;
-        res.render('article' , {article: article});
-    });
-});
-
-app.get('/author/:id', (req, res) => {
-    let query = `SELECT author.name AS author, article.name AS article, article.slug AS slug, article.image AS image FROM article INNER JOIN author ON article.author_id = author.id WHERE author.id = ${req.params.id}`;
-    let articles = [];
-    con.query(query, (err, result) => {
-        if (err) throw err;
-        articles = result;
-        author = result[0].author;
-        res.render('author' , {articles: articles, author: author});
-    });
-});
+app.use('/', articleRoutes);
+app.use('/article', articleRoutes);
+app.use('/author', articleRoutes);
 
 app.listen(3000, () => {
     console.log('Server is running at port 3000');
